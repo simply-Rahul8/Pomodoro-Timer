@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Pomodoro Timer</title>
+  <style>
+    :root{
+      --bg:#0f172a; /* slate-900 */
+      --panel:#111827; /* gray-900 */
+      --muted:#94a3b8; /* slate-400 */
+      --text:#e5e7eb; /* gray-200 */
+      --accent:#22c55e; /* green-500 */
+      --accent-2:#38bdf8; /* sky-400 */
+      --danger:#ef4444; /* red-500 */
+      --warning:#f59e0b; /* amber-500 */
+      --shadow: 0 10px 30px rgba(0,0,0,.35);
+      --radius: 18px;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, Noto Sans, "Apple Color Emoji", "Segoe UI Emoji";
+      background: radial-gradient(1000px 600px at 10% 10%, #111827 0%, #0b1022 60%, #070b16 100%);
+      color:var(--text);
+      display:grid; place-items:center; padding:24px;
+    }
+    .app{width:min(900px, 100%);}
+    .card{
+      background: linear-gradient(165deg, rgba(255,255,255,0.03), rgba(255,255,255,0.02));
+      border:1px solid rgba(255,255,255,0.06);
+      box-shadow: var(--shadow);
+      border-radius: var(--radius);
+      padding:24px;
+    }
+    .title{display:flex; align-items:center; gap:12px; margin:0 0 8px}
+    .title h1{font-size: clamp(20px, 2vw, 26px); margin:0}
+    .subtitle{color:var(--muted); margin:0 0 16px; font-size:14px}
+
+    .grid{display:grid; grid-template-columns: 1fr; gap:16px}
+    @media (min-width: 760px){
+      .grid{grid-template-columns: 1.1fr .9fr}
+    }
+
+    .timer{
+      display:grid; gap:18px; align-content:center; justify-items:center;
+      min-height: 340px; background:rgba(255,255,255,0.02); border-radius: var(--radius); border:1px solid rgba(255,255,255,0.05)
+    }
+    .phase{letter-spacing: .2em; text-transform: uppercase; font-size:12px; color:var(--muted)}
+    .time{font-variant-numeric: tabular-nums; font-size: clamp(56px, 10vw, 120px); font-weight:700}
+    .controls{display:flex; gap:10px; flex-wrap:wrap; justify-content:center}
+    button{
+      border:none; border-radius: 14px; padding:12px 16px; font-weight:600; cursor:pointer;
+      background: #111827; color:var(--text); border:1px solid rgba(255,255,255,0.08);
+      transition: transform .08s ease, background .2s ease, opacity .2s ease;
+    }
+    button:hover{transform: translateY(-1px)}
+    .primary{background: linear-gradient(135deg, var(--accent-2), var(--accent)); color:#041019;}
+    .danger{background: linear-gradient(135deg, #fb7185, var(--danger)); color:#1a0b0b}
+    .ghost{background: transparent}
+    .muted{opacity:.8}
+
+    .settings{display:grid; gap:12px}
+    .row{display:grid; grid-template-columns: 1fr 1fr; gap:10px}
+    .field{display:grid; gap:6px}
+    label{font-size:12px; color:var(--muted)}
+    input[type="number"]{
+      width:100%; padding:12px 14px; border-radius:12px; border:1px solid rgba(255,255,255,0.08); background:#0b1224; color:var(--text);
+    }
+    .switch{display:flex; gap:10px; align-items:center; padding:10px 12px; border:1px solid rgba(255,255,255,0.08); border-radius:12px; background:#0b1224}
+    .switch input{accent-color: var(--accent)}
+
+    .dots{display:flex; gap:8px; align-items:center; justify-content:center; flex-wrap:wrap}
+    .dot{width:10px; height:10px; border-radius:999px; background:rgba(148,163,184,.35);}
+    .dot.active{background:var(--accent-2)}
+
+    .footer{margin-top:10px; color:var(--muted); font-size:12px; display:flex; gap:8px; align-items:center; flex-wrap:wrap}
+    .link{color:var(--accent-2); text-decoration:none}
+  </style>
+</head>
+<body>
+  <div class="app card">
+    <div class="title">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M7 3h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        <path d="M12 8v4l3 3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        <circle cx="12" cy="13" r="8" stroke="currentColor" stroke-width="2"/>
+      </svg>
+      <h1>Pomodoro Timer</h1>
+    </div>
+    <p class="subtitle">Work in focused sprints with optional desktop notifications and sound.</p>
+
+    <div class="grid">
+      <section class="timer">
+        <div class="phase" id="phaseLabel">Ready</div>
+        <div class="time" id="time">25:00</div>
+        <div class="controls">
+          <button id="startPause" class="primary">Start</button>
+          <button id="reset" class="ghost">Reset</button>
+          <button id="skip" class="ghost">Skip ⏭</button>
+        </div>
+        <div class="dots" id="dots"></div>
+      </section>
+
+      <section class="settings card">
+        <div class="row">
+          <div class="field">
+            <label for="work">Work (minutes)</label>
+            <input id="work" type="number" min="1" max="120" value="25" />
+          </div>
+          <div class="field">
+            <label for="shortBreak">Short break (minutes)</label>
+            <input id="shortBreak" type="number" min="1" max="60" value="5" />
+          </div>
+        </div>
+        <div class="row">
+          <div class="field">
+            <label for="longBreak">Long break (minutes)</label>
+            <input id="longBreak" type="number" min="1" max="120" value="15" />
+          </div>
+          <div class="field">
+            <label for="rounds">Rounds until long break</label>
+            <input id="rounds" type="number" min="1" max="12" value="4" />
+          </div>
+        </div>
+        <div class="row">
+          <label class="switch"><input id="autoNext" type="checkbox" checked /> Auto-start next session</label>
+          <label class="switch"><input id="sound" type="checkbox" checked /> Play sound on switch</label>
+        </div>
+        <div class="row">
+          <label class="switch"><input id="desktopNotifs" type="checkbox" /> Desktop notifications</label>
+          <button id="askPerm" class="muted">Grant notification permission</button>
+        </div>
+      </section>
+    </div>
+
+    <div class="footer">
+      <span id="supportMsg"></span>
+      <span>•</span>
+      <a class="link" href="https://developer.mozilla.org/en-US/docs/Web/API/Notifications_API" target="_blank" rel="noreferrer">About Notifications API</a>
+    </div>
+  </div>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+
+    const el = {
+      phase: $('phaseLabel'),
+      time: $('time'),
+      startPause: $('startPause'),
+      reset: $('reset'),
+      skip: $('skip'),
+      work: $('work'),
+      shortBreak: $('shortBreak'),
+      longBreak: $('longBreak'),
+      rounds: $('rounds'),
+      autoNext: $('autoNext'),
+      sound: $('sound'),
+      desktopNotifs: $('desktopNotifs'),
+      askPerm: $('askPerm'),
+      dots: $('dots'),
+      supportMsg: $('supportMsg'),
+    };
+
+    const STORAGE_KEY = 'pomodoro.settings.v1';
+
+    const defaultSettings = () => ({
+      work: 25, shortBreak: 5, longBreak: 15, rounds: 4,
+      autoNext: true, sound: true, desktopNotifs: false
+    });
+
+    function loadSettings(){
+      try{
+        const s = JSON.parse(localStorage.getItem(STORAGE_KEY));
+        return { ...defaultSettings(), ...(s||{}) };
+      }catch{ return defaultSettings(); }
+    }
+    function saveSettings(){
+      const s = {
+        work: +el.work.value,
+        shortBreak: +el.shortBreak.value,
+        longBreak: +el.longBreak.value,
+        rounds: +el.rounds.value,
+        autoNext: el.autoNext.checked,
+        sound: el.sound.checked,
+        desktopNotifs: el.desktopNotifs.checked,
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
+    }
+
+    function applySettings(s){
+      el.work.value = s.work; el.shortBreak.value = s.shortBreak;
+      el.longBreak.value = s.longBreak; el.rounds.value = s.rounds;
+      el.autoNext.checked = s.autoNext; el.sound.checked = s.sound;
+      el.desktopNotifs.checked = s.desktopNotifs;
+    }
+
+    // Timer state
+    const State = {
+      phase: 'work',
+      remaining: 25 * 60,
+      running: false,
+      timerId: null,
+      completedWorkSessions: 0,
+    };
+
+    function initDots(){
+      el.dots.innerHTML='';
+      const total = +el.rounds.value;
+      for(let i=0;i<total;i++){
+        const d = document.createElement('div');
+        d.className = 'dot';
+        el.dots.appendChild(d);
+      }
+      updateDots();
+    }
+    function updateDots(){
+      const total = el.dots.children.length;
+      for(let i=0;i<total;i++){
+        el.dots.children[i].classList.toggle('active', i < State.completedWorkSessions % total);
+      }
+    }
+
+    function fmt(sec){
+      const m = Math.floor(sec/60).toString().padStart(2,'0');
+      const s = Math.floor(sec%60).toString().padStart(2,'0');
+      return `${m}:${s}`;
+    }
+
+    function setPhase(phase){
+      State.phase = phase;
+      let minutes = +el.work.value;
+      if(phase==='short') minutes = +el.shortBreak.value;
+      if(phase==='long') minutes = +el.longBreak.value;
+      State.remaining = minutes * 60;
+      el.phase.textContent = phase==='work' ? 'Work' : (phase==='short' ? 'Short Break' : 'Long Break');
+      updateTitle();
+      renderTime();
+    }
+
+    function nextPhase(){
+      if(State.phase === 'work'){
+        State.completedWorkSessions++;
+        updateDots();
+        const isLong = State.completedWorkSessions % +el.rounds.value === 0;
+        setPhase(isLong ? 'long' : 'short');
+      } else {
+        setPhase('work');
+      }
+      if(el.sound.checked) beep();
+      notify(`${el.phase.textContent} started`, {
+        body: State.phase==='work' ? `Focus for ${el.work.value} min` : `Relax for ${State.phase==='short' ? el.shortBreak.value : el.longBreak.value} min`,
+      });
+      if(el.autoNext.checked){ startTimer(); }
+    }
+
+    function renderTime(){ el.time.textContent = fmt(State.remaining); }
+
+    function updateTitle(){
+      const emoji = State.phase==='work' ? '🍅' : '☕️';
+      document.title = `${emoji} ${fmt(State.remaining)} • ${el.phase.textContent} – Pomodoro`;
+    }
+
+    function tick(){
+      if(!State.running) return;
+      State.remaining -= 1;
+      if(State.remaining <= 0){
+        stopTimer(false);
+        notify(`${el.phase.textContent} done`, { body: 'Time\'s up!' });
+        flashTitle("⏰ Time's up!");
+        nextPhase();
+        return;
+      }
+      renderTime();
+      updateTitle();
+    }
+
+    function startTimer(){
+      if(State.running) return;
+      State.running = true;
+      el.startPause.textContent = 'Pause';
+      State.timerId = setInterval(tick, 1000);
+    }
+
+    function stopTimer(updateBtn=true){
+      State.running = false;
+      clearInterval(State.timerId);
+      if(updateBtn) el.startPause.textContent = 'Start';
+    }
+
+    function resetTimer(){
+      stopTimer();
+      State.completedWorkSessions = 0;
+      setPhase('work');
+      initDots();
+    }
+
+    // Notifications
+    function supported(){ return 'Notification' in window; }
+
+    function updateSupportMsg(){
+      let msg = supported() ? 'Desktop notifications are supported.' : 'Desktop notifications are not supported in this browser.';
+      const perm = supported() ? Notification.permission : 'denied';
+      msg += supported() ? ` Permission: ${perm}.` : '';
+      el.supportMsg.textContent = msg;
+    }
+
+    async function ensurePermission(){
+      if(!supported()) return false;
+      if(Notification.permission === 'granted') return true;
+      if(Notification.permission === 'denied') return false;
+      const r = await Notification.requestPermission();
+      return r === 'granted';
+    }
+
+    async function notify(title, options={}){
+      try{
+        if(el.desktopNotifs.checked && supported()){
+          const ok = await ensurePermission();
+          if(ok){
+            const n = new Notification(title, { ...options, silent: true });
+            // Auto close after 5s
+            setTimeout(()=>n.close(), 5000);
+          }
+        }
+      }catch(err){
+        console.warn('Notification error', err);
+      }
+    }
+
+    // Title flash fallback when notifications are off
+    let flashInterval = null;
+    function flashTitle(text){
+      clearInterval(flashInterval);
+      const original = document.title;
+      let on = false;
+      let count = 0;
+      flashInterval = setInterval(()=>{
+        document.title = on ? text : original;
+        on = !on; count++;
+        if(count>10){ clearInterval(flashInterval); document.title = original; }
+      }, 800);
+    }
+
+    // Beep using Web Audio API
+    function beep(){
+      try{
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const o = ctx.createOscillator();
+        const g = ctx.createGain();
+        o.type = 'sine';
+        o.frequency.value = 880; // A5
+        g.gain.value = 0.001; // gentle
+        o.connect(g); g.connect(ctx.destination);
+        o.start();
+        g.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime + 0.6);
+        o.stop(ctx.currentTime + 0.6);
+      }catch{}
+    }
+
+    // Event wiring
+    el.startPause.addEventListener('click', ()=>{
+      if(State.running){ stopTimer(); }
+      else { startTimer(); }
+    });
+    el.reset.addEventListener('click', ()=>{ resetTimer(); saveSettings(); notify('Timer reset'); });
+    el.skip.addEventListener('click', ()=>{ stopTimer(); nextPhase(); });
+
+    [el.work, el.shortBreak, el.longBreak, el.rounds].forEach(inp=>{
+      inp.addEventListener('change', ()=>{ saveSettings(); if(!State.running){ setPhase(State.phase); initDots(); }});
+    });
+    [el.autoNext, el.sound, el.desktopNotifs].forEach(inp=>{
+      inp.addEventListener('change', ()=>{ saveSettings(); });
+    });
+
+    el.askPerm.addEventListener('click', async()=>{
+      if(!supported()) return;
+      const ok = await ensurePermission();
+      if(ok){ el.desktopNotifs.checked = true; saveSettings(); notify('Notifications enabled', { body: 'You\'ll get alerts when sessions switch.'}); }
+      updateSupportMsg();
+    });
+
+    // Init
+    (function(){
+      applySettings(loadSettings());
+      setPhase('work');
+      initDots();
+      updateSupportMsg();
+      renderTime();
+      updateTitle();
+      // On visibility change, update title quickly
+      document.addEventListener('visibilitychange', updateTitle);
+      // Ask permission lazily after a user gesture (first click anywhere)
+      window.addEventListener('click', async function once(){
+        if(el.desktopNotifs.checked){ await ensurePermission(); updateSupportMsg(); }
+        window.removeEventListener('click', once);
+      }, { once:true });
+    })();
+  </script>
+</body>
+</html>
