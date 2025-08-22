@@ -1,0 +1,45 @@
+# .gitignore for Pomodoro Timer project
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# Node modules
+node_modules/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build outputs
+dist/
+build/
+
+# Temporary files
+*.tmp
+*.swp
+
+# IDE/editor configs
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Cache
+.cache/
+.astro/
+.next/
+.nuxt/
+out/
+
+# Coverage
+coverage/
+
+# Misc
+*.lock
